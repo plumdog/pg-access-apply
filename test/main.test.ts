@@ -1,15 +1,16 @@
-import { Client } from 'pg';
+import { Client, ClientConfig } from 'pg';
 import { pg_applier } from '../';
 
 // TODO: lots and lots more tests
 
-const getClient = (): Client => {
+const getClient = (config?: ClientConfig): Client => {
     return new Client({
         user: process.env.PG_USERNAME || '',
         host: process.env.PG_HOST || '',
         database: process.env.PG_USERNAME || '',
         password: process.env.PG_PASSWORD || '',
         port: parseInt(process.env.PG_PORT || '5432', 10),
+        ...(config || {}),
     });
 };
 
@@ -300,6 +301,44 @@ describe('role', () => {
             expect(role2.rolconnlimit).toEqual(20);
         } finally {
             await client.end();
+        }
+    });
+});
+
+describe('combined', () => {
+    test('create new role, new role can connect ', async () => {
+        const client = getClient();
+        await client.connect();
+
+        const roleName = `testrole_${randString(12)}`;
+
+        try {
+            const applier = pg_applier({
+                query: client.query.bind(client),
+            });
+
+            await applier.role({
+                name: roleName,
+                properties: {
+                    password: 'mypass',
+                    login: true,
+                },
+            });
+        } finally {
+            await client.end();
+        }
+
+        const newClient = getClient({
+            user: roleName,
+            password: 'mypass',
+        });
+        await newClient.connect();
+
+        try {
+            const result = await newClient.query('SELECT 1+1 as two');
+            expect(result.rows[0].two).toEqual(2);
+        } finally {
+            await newClient.end();
         }
     });
 });
