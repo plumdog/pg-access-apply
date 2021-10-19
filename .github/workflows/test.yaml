@@ -5,6 +5,18 @@ on: push
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: ubuntu:focal
+
+    services:
+      pg:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: pg
+        options: >-
+            --health-cmd pg_isready
+            --health-interval 10s
+            --health-timeout 5s
+            --health-retries 5
 
     strategy:
       matrix:
@@ -20,4 +32,9 @@ jobs:
     - run: npm run compile
 
     - run: npm run lint-check
-    # - run: npm run test
+    - run: npm run test
+      env:
+        PG_HOST: pg
+        PG_USERNAME: postgres
+        PG_PASSWORD: pg
+        PG_PORT: 5432
