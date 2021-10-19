@@ -2,4 +2,4 @@
 
 docker-compose build
 docker-compose down -v
-docker-compose -f docker-compose.yaml run --rm pg-access-apply
+docker-compose -f docker-compose.yaml run --rm pg-access-apply npm run -- test "$@"

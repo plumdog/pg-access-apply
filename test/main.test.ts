@@ -45,6 +45,36 @@ describe('database', () => {
         }
     });
 
+    test('create database with transaction', async () => {
+        const client = getClient();
+        await client.connect();
+
+        try {
+            // This works, but only because the code knows to *not*
+            // use a transaction for database creation.
+            const applier = pg_applier({
+                query: client.query.bind(client),
+                useTransactions: true,
+            });
+
+            const databaseName = `testdb_${randString(12)}`;
+
+            await applier.database({
+                name: databaseName,
+            });
+
+            const result = await client.query('SELECT datname from pg_database');
+            const dbs = [];
+            for (const row of result.rows) {
+                dbs.push(row.datname);
+            }
+
+            expect(dbs).toEqual(expect.arrayContaining([databaseName]));
+        } finally {
+            await client.end();
+        }
+    });
+
     test('handle existing database', async () => {
         const client = getClient();
         await client.connect();
@@ -105,6 +135,37 @@ describe('database', () => {
             await client.end();
         }
     });
+
+    test('change connection limit with transaction', async () => {
+        const client = getClient();
+        await client.connect();
+
+        try {
+            const applier = pg_applier({
+                query: client.query.bind(client),
+                useTransactions: true,
+            });
+
+            const databaseName = `testdb_${randString(12)}`;
+
+            await applier.database({
+                name: databaseName,
+                connectionLimit: 10,
+            });
+
+            const db = (await client.query(`SELECT * FROM pg_database WHERE datname = '${databaseName}'`)).rows[0];
+            expect(db.datconnlimit).toEqual(10);
+
+            await applier.database({
+                name: databaseName,
+                connectionLimit: 20,
+            });
+            const db2 = (await client.query(`SELECT * FROM pg_database WHERE datname = '${databaseName}'`)).rows[0];
+            expect(db2.datconnlimit).toEqual(20);
+        } finally {
+            await client.end();
+        }
+    });
 });
 
 describe('role', () => {
@@ -135,6 +196,34 @@ describe('role', () => {
         }
     });
 
+    test('create role with transaction', async () => {
+        const client = getClient();
+        await client.connect();
+
+        try {
+            const applier = pg_applier({
+                query: client.query.bind(client),
+                useTransactions: true,
+            });
+
+            const roleName = `testrole_${randString(12)}`;
+
+            await applier.role({
+                name: roleName,
+            });
+
+            const result = await client.query('SELECT rolname from pg_roles');
+            const roles = [];
+            for (const row of result.rows) {
+                roles.push(row.rolname);
+            }
+
+            expect(roles).toEqual(expect.arrayContaining([roleName]));
+        } finally {
+            await client.end();
+        }
+    });
+
     test('change connection limit', async () => {
         const client = getClient();
         await client.connect();
@@ -142,6 +231,38 @@ describe('role', () => {
         try {
             const applier = pg_applier({
                 query: client.query.bind(client),
+            });
+
+            const roleName = `testrole_${randString(12)}`;
+
+            await applier.role({
+                name: roleName,
+                connectionLimit: 10,
+            });
+
+            const role = (await client.query(`SELECT * FROM pg_roles WHERE rolname = '${roleName}'`)).rows[0];
+            expect(role.rolconnlimit).toEqual(10);
+
+            await applier.role({
+                name: roleName,
+                connectionLimit: 20,
+            });
+
+            const role2 = (await client.query(`SELECT * FROM pg_roles WHERE rolname = '${roleName}'`)).rows[0];
+            expect(role2.rolconnlimit).toEqual(20);
+        } finally {
+            await client.end();
+        }
+    });
+
+    test('change connection limit with transaction', async () => {
+        const client = getClient();
+        await client.connect();
+
+        try {
+            const applier = pg_applier({
+                query: client.query.bind(client),
+                useTransactions: true,
             });
 
             const roleName = `testrole_${randString(12)}`;

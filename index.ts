@@ -13,6 +13,7 @@ interface QueryResult {
 
 export interface Config {
     query: (text: string, values?: Array<string>) => Promise<QueryResult>;
+    useTransactions?: boolean;
 }
 
 interface DatabaseOptions {
@@ -47,6 +48,33 @@ interface RoleOptions {
 export interface Role extends RoleOptions {
     name: string;
 }
+
+interface ExecuteQueriesProps {
+    config: Config;
+    queries: Array<string>;
+}
+
+const executeQueries = async (props: ExecuteQueriesProps): Promise<void> => {
+    const runAllQueries = async (): Promise<void> => {
+        for (const query of props.queries) {
+            await props.config.query(query);
+        }
+    };
+
+    if (!props.config.useTransactions) {
+        await runAllQueries();
+        return;
+    }
+
+    await props.config.query('BEGIN');
+    try {
+        await runAllQueries();
+    } catch (err) {
+        await props.config.query('ROLLBACK');
+        throw err;
+    }
+    await props.config.query('COMMIT');
+};
 
 export interface PgApplier {
     database(database: Database): Promise<void>;
@@ -103,18 +131,24 @@ export const pg_applier = (config: Config): PgApplier => ({
                 throw new Error('Cannot change the ctype of an existing database');
             }
 
+            const queries: Array<string> = [];
             // Apply changes
             if (modifyChanges.owner) {
-                await config.query(`ALTER DATABASE ${database.name} OWNER TO ${database.owner}`);
+                queries.push(`ALTER DATABASE ${database.name} OWNER TO ${database.owner}`);
             }
 
             if (modifyChanges.tablespace) {
-                await config.query(`ALTER DATABASE ${database.name} TABLESPACE ${database.tablespace}`);
+                queries.push(`ALTER DATABASE ${database.name} TABLESPACE ${database.tablespace}`);
             }
 
             if (modifyChanges.connectionLimit) {
-                await config.query(`ALTER DATABASE ${database.name} CONNECTION LIMIT ${database.connectionLimit}`);
+                queries.push(`ALTER DATABASE ${database.name} CONNECTION LIMIT ${database.connectionLimit}`);
             }
+
+            await executeQueries({
+                config,
+                queries,
+            });
 
             return;
         }
@@ -146,7 +180,14 @@ export const pg_applier = (config: Config): PgApplier => ({
         const configQueryFragment = createConfig.join(' ');
         const query = `CREATE DATABASE ${database.name} ${configQueryFragment}`.trim();
 
-        await config.query(query);
+        await executeQueries({
+            config: {
+                ...config,
+                // Cannot use transaction for CREATE DATABASE. See https://www.postgresql.org/docs/14/sql-createdatabase.html
+                useTransactions: false,
+            },
+            queries: [query],
+        });
     },
 
     async role(role: Role): Promise<void> {
@@ -186,32 +227,37 @@ export const pg_applier = (config: Config): PgApplier => ({
             }
             // TODO: check pg_auth_members for inRoles, roles and adminRoles config
 
+            const queries: Array<string> = [];
+
             if (typeof modifyChanges.isSuperuser !== 'undefined') {
-                await config.query(`ALTER ROLE ${role.name} ${modifyChanges.isSuperuser ? '' : 'NO'}SUPERUSER`);
+                queries.push(`ALTER ROLE ${role.name} ${modifyChanges.isSuperuser ? '' : 'NO'}SUPERUSER`);
             }
             if (typeof modifyChanges.canCreateDb !== 'undefined') {
-                await config.query(`ALTER ROLE ${role.name} ${modifyChanges.canCreateDb ? '' : 'NO'}CREATEDB`);
+                queries.push(`ALTER ROLE ${role.name} ${modifyChanges.canCreateDb ? '' : 'NO'}CREATEDB`);
             }
             if (typeof modifyChanges.canCreateRole !== 'undefined') {
-                await config.query(`ALTER ROLE ${role.name} ${modifyChanges.canCreateRole ? '' : 'NO'}CREATEROLE`);
+                queries.push(`ALTER ROLE ${role.name} ${modifyChanges.canCreateRole ? '' : 'NO'}CREATEROLE`);
             }
             if (typeof modifyChanges.inherit !== 'undefined') {
-                await config.query(`ALTER ROLE ${role.name} ${modifyChanges.inherit ? '' : 'NO'}INHERIT`);
+                queries.push(`ALTER ROLE ${role.name} ${modifyChanges.inherit ? '' : 'NO'}INHERIT`);
             }
             if (typeof modifyChanges.login !== 'undefined') {
-                await config.query(`ALTER ROLE ${role.name} ${modifyChanges.login ? '' : 'NO'}LOGIN`);
+                queries.push(`ALTER ROLE ${role.name} ${modifyChanges.login ? '' : 'NO'}LOGIN`);
             }
             if (typeof modifyChanges.connectionLimit !== 'undefined') {
-                await config.query(`ALTER ROLE ${role.name} CONNECTION LIMIT ${role.connectionLimit}`);
+                queries.push(`ALTER ROLE ${role.name} CONNECTION LIMIT ${role.connectionLimit}`);
             }
             if (typeof modifyChanges.password !== 'undefined') {
                 const encryptedQueryFragment = typeof modifyChanges.passwordEncrypted === 'undefined' ? '' : `${modifyChanges.passwordEncrypted ? '' : 'UN'}ENCRYPTED `;
-                await config.query(`ALTER ROLE ${role.name} ${encryptedQueryFragment}PASSWORD ${modifyChanges.password}`);
+                queries.push(`ALTER ROLE ${role.name} ${encryptedQueryFragment}PASSWORD ${modifyChanges.password}`);
             }
             if (typeof modifyChanges.passwordValidUntil !== 'undefined') {
-                await config.query(`ALTER ROLE ${role.name} VALID UNTIL '${modifyChanges.passwordValidUntil.toISOString()}'`);
+                queries.push(`ALTER ROLE ${role.name} VALID UNTIL '${modifyChanges.passwordValidUntil.toISOString()}'`);
             }
-
+            await executeQueries({
+                config,
+                queries,
+            });
             return;
         }
 
@@ -255,7 +301,9 @@ export const pg_applier = (config: Config): PgApplier => ({
         }
 
         const query = `CREATE ROLE ${role.name} ${configFragments.join(' ')}`.trim();
-
-        await config.query(query);
+        await executeQueries({
+            config,
+            queries: [query],
+        });
     },
 });
