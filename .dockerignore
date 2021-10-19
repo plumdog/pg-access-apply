@@ -1,0 +1,7 @@
+*
+!index.ts
+!jest.config.js
+!package.json
+!package-lock.json
+!test/
+!tsconfig.json
