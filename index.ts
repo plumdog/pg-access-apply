@@ -1,6 +1,4 @@
-// Maybe split to have {Role,Database}Properties and
-// {Role,Database}Options. The former for actual things that get set
-// in PG, the latter for things about how this client handles changes.
+// Maybe add  {Role,Database}Options for things about how this client handles changes.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type QueryResultRow = Record<string, any>;
@@ -16,7 +14,7 @@ export interface Config {
     useTransactions?: boolean;
 }
 
-interface DatabaseOptions {
+interface DatabaseProperties {
     owner?: string;
     template?: string;
     encoding?: string;
@@ -26,11 +24,12 @@ interface DatabaseOptions {
     connectionLimit?: number;
 }
 
-export interface Database extends DatabaseOptions {
+export interface Database {
     name: string;
+    properties?: DatabaseProperties;
 }
 
-interface RoleOptions {
+interface RoleProperties {
     isSuperuser?: boolean;
     canCreateDb?: boolean;
     canCreateRole?: boolean;
@@ -45,8 +44,9 @@ interface RoleOptions {
     adminRoles?: Array<string>;
 }
 
-export interface Role extends RoleOptions {
+export interface Role {
     name: string;
+    properties?: RoleProperties;
 }
 
 interface ExecuteQueriesProps {
@@ -86,35 +86,38 @@ export const pg_applier = (config: Config): PgApplier => ({
         const result = await config.query(
             `SELECT *, pg_encoding_to_char(encoding) as encoding_name, rolname as owner_role_name, spcname as tablespace_name FROM pg_database JOIN pg_authid ON pg_database.datdba = pg_authid.oid JOIN pg_tablespace ON pg_database.dattablespace = pg_tablespace.oid WHERE datname = '${database.name}'`,
         );
+
+        const { properties = {} } = database;
+
         if (result.rows.length) {
             // Database already exists
 
             const currentDbConfig = result.rows[0];
 
-            const modifyChanges: DatabaseOptions = {};
+            const modifyChanges: DatabaseProperties = {};
 
-            if (database.owner && currentDbConfig.owner_role_name !== database.owner) {
-                modifyChanges.owner = database.owner;
+            if (properties.owner && currentDbConfig.owner_role_name !== properties.owner) {
+                modifyChanges.owner = properties.owner;
             }
 
-            if (database.encoding && currentDbConfig.encoding_name !== database.encoding) {
-                modifyChanges.encoding = database.encoding;
+            if (properties.encoding && currentDbConfig.encoding_name !== properties.encoding) {
+                modifyChanges.encoding = properties.encoding;
             }
 
-            if (database.lcCollate && currentDbConfig.datcollate !== database.lcCollate) {
-                modifyChanges.lcCollate = database.lcCollate;
+            if (properties.lcCollate && currentDbConfig.datcollate !== properties.lcCollate) {
+                modifyChanges.lcCollate = properties.lcCollate;
             }
 
-            if (database.lcCtype && currentDbConfig.datctype !== database.lcCtype) {
-                modifyChanges.lcCtype = database.lcCtype;
+            if (properties.lcCtype && currentDbConfig.datctype !== properties.lcCtype) {
+                modifyChanges.lcCtype = properties.lcCtype;
             }
 
-            if (database.tablespace && currentDbConfig.tablespace_name !== database.tablespace) {
-                modifyChanges.tablespace = database.tablespace;
+            if (properties.tablespace && currentDbConfig.tablespace_name !== properties.tablespace) {
+                modifyChanges.tablespace = properties.tablespace;
             }
 
-            if (database.connectionLimit && currentDbConfig.datconnlimit !== database.connectionLimit) {
-                modifyChanges.connectionLimit = database.connectionLimit;
+            if (properties.connectionLimit && currentDbConfig.datconnlimit !== properties.connectionLimit) {
+                modifyChanges.connectionLimit = properties.connectionLimit;
             }
 
             // Check for invalid changes
@@ -134,15 +137,15 @@ export const pg_applier = (config: Config): PgApplier => ({
             const queries: Array<string> = [];
             // Apply changes
             if (modifyChanges.owner) {
-                queries.push(`ALTER DATABASE ${database.name} OWNER TO ${database.owner}`);
+                queries.push(`ALTER DATABASE ${database.name} OWNER TO ${properties.owner}`);
             }
 
             if (modifyChanges.tablespace) {
-                queries.push(`ALTER DATABASE ${database.name} TABLESPACE ${database.tablespace}`);
+                queries.push(`ALTER DATABASE ${database.name} TABLESPACE ${properties.tablespace}`);
             }
 
             if (modifyChanges.connectionLimit) {
-                queries.push(`ALTER DATABASE ${database.name} CONNECTION LIMIT ${database.connectionLimit}`);
+                queries.push(`ALTER DATABASE ${database.name} CONNECTION LIMIT ${properties.connectionLimit}`);
             }
 
             await executeQueries({
@@ -155,26 +158,26 @@ export const pg_applier = (config: Config): PgApplier => ({
 
         const createConfig: Array<string> = [];
 
-        if (database.owner) {
-            createConfig.push(`OWNER = ${database.owner}`);
+        if (properties.owner) {
+            createConfig.push(`OWNER = ${properties.owner}`);
         }
-        if (database.template) {
-            createConfig.push(`TEMPLATE = ${database.template}`);
+        if (properties.template) {
+            createConfig.push(`TEMPLATE = ${properties.template}`);
         }
-        if (database.encoding) {
-            createConfig.push(`ENCODING = ${database.encoding}`);
+        if (properties.encoding) {
+            createConfig.push(`ENCODING = ${properties.encoding}`);
         }
-        if (database.lcCollate) {
-            createConfig.push(`LC_COLLATE = ${database.lcCollate}`);
+        if (properties.lcCollate) {
+            createConfig.push(`LC_COLLATE = ${properties.lcCollate}`);
         }
-        if (database.lcCtype) {
-            createConfig.push(`LC_CTYPE = ${database.lcCtype}`);
+        if (properties.lcCtype) {
+            createConfig.push(`LC_CTYPE = ${properties.lcCtype}`);
         }
-        if (database.tablespace) {
-            createConfig.push(`TABLESPACE = ${database.tablespace}`);
+        if (properties.tablespace) {
+            createConfig.push(`TABLESPACE = ${properties.tablespace}`);
         }
-        if (database.connectionLimit) {
-            createConfig.push(`CONNECTION LIMIT = ${database.connectionLimit}`);
+        if (properties.connectionLimit) {
+            createConfig.push(`CONNECTION LIMIT = ${properties.connectionLimit}`);
         }
 
         const configQueryFragment = createConfig.join(' ');
@@ -192,38 +195,39 @@ export const pg_applier = (config: Config): PgApplier => ({
 
     async role(role: Role): Promise<void> {
         const result = await config.query(`SELECT * FROM pg_roles WHERE rolname = '${role.name}'`);
+        const { properties = {} } = role;
         if (result.rows.length) {
             // Already exists
             const currentRoleConfig = result.rows[0];
-            const modifyChanges: RoleOptions = {};
+            const modifyChanges: RoleProperties = {};
 
-            if (typeof role.isSuperuser !== 'undefined' && currentRoleConfig.rolsuper !== role.isSuperuser) {
-                modifyChanges.isSuperuser = role.isSuperuser;
+            if (typeof properties.isSuperuser !== 'undefined' && currentRoleConfig.rolsuper !== properties.isSuperuser) {
+                modifyChanges.isSuperuser = properties.isSuperuser;
             }
-            if (typeof role.canCreateDb !== 'undefined' && currentRoleConfig.rolcreatedb !== role.canCreateDb) {
-                modifyChanges.canCreateDb = role.canCreateDb;
+            if (typeof properties.canCreateDb !== 'undefined' && currentRoleConfig.rolcreatedb !== properties.canCreateDb) {
+                modifyChanges.canCreateDb = properties.canCreateDb;
             }
-            if (typeof role.canCreateRole !== 'undefined' && currentRoleConfig.rolcreatedb !== role.canCreateRole) {
-                modifyChanges.canCreateRole = role.canCreateRole;
+            if (typeof properties.canCreateRole !== 'undefined' && currentRoleConfig.rolcreatedb !== properties.canCreateRole) {
+                modifyChanges.canCreateRole = properties.canCreateRole;
             }
-            if (typeof role.inherit !== 'undefined' && currentRoleConfig.rolinherit !== role.inherit) {
-                modifyChanges.inherit = role.inherit;
+            if (typeof properties.inherit !== 'undefined' && currentRoleConfig.rolinherit !== properties.inherit) {
+                modifyChanges.inherit = properties.inherit;
             }
-            if (typeof role.login !== 'undefined' && currentRoleConfig.rolcanlogin !== role.login) {
-                modifyChanges.login = role.login;
+            if (typeof properties.login !== 'undefined' && currentRoleConfig.rolcanlogin !== properties.login) {
+                modifyChanges.login = properties.login;
             }
-            if (typeof role.connectionLimit !== 'undefined' && currentRoleConfig.rolconnlimit !== role.connectionLimit) {
-                modifyChanges.connectionLimit = role.connectionLimit;
+            if (typeof properties.connectionLimit !== 'undefined' && currentRoleConfig.rolconnlimit !== properties.connectionLimit) {
+                modifyChanges.connectionLimit = properties.connectionLimit;
             }
             // TODO join with pg_auth to check the password and whether it is encrypted
-            if (typeof role.password !== 'undefined') {
-                modifyChanges.password = role.password;
-                if (typeof role.passwordEncrypted !== 'undefined') {
-                    modifyChanges.passwordEncrypted = role.passwordEncrypted;
+            if (typeof properties.password !== 'undefined') {
+                modifyChanges.password = properties.password;
+                if (typeof properties.passwordEncrypted !== 'undefined') {
+                    modifyChanges.passwordEncrypted = properties.passwordEncrypted;
                 }
             }
-            if (typeof role.passwordValidUntil !== 'undefined' && currentRoleConfig.rolvaliduntil !== role.passwordValidUntil) {
-                modifyChanges.passwordValidUntil = role.passwordValidUntil;
+            if (typeof properties.passwordValidUntil !== 'undefined' && currentRoleConfig.rolvaliduntil !== properties.passwordValidUntil) {
+                modifyChanges.passwordValidUntil = properties.passwordValidUntil;
             }
             // TODO: check pg_auth_members for inRoles, roles and adminRoles config
 
@@ -245,7 +249,7 @@ export const pg_applier = (config: Config): PgApplier => ({
                 queries.push(`ALTER ROLE ${role.name} ${modifyChanges.login ? '' : 'NO'}LOGIN`);
             }
             if (typeof modifyChanges.connectionLimit !== 'undefined') {
-                queries.push(`ALTER ROLE ${role.name} CONNECTION LIMIT ${role.connectionLimit}`);
+                queries.push(`ALTER ROLE ${role.name} CONNECTION LIMIT ${properties.connectionLimit}`);
             }
             if (typeof modifyChanges.password !== 'undefined') {
                 const encryptedQueryFragment = typeof modifyChanges.passwordEncrypted === 'undefined' ? '' : `${modifyChanges.passwordEncrypted ? '' : 'UN'}ENCRYPTED `;
@@ -263,41 +267,41 @@ export const pg_applier = (config: Config): PgApplier => ({
 
         const configFragments: Array<string> = [];
 
-        if (typeof role.isSuperuser !== 'undefined') {
-            configFragments.push(`${role.isSuperuser ? '' : 'NO'}SUPERUSER`);
+        if (typeof properties.isSuperuser !== 'undefined') {
+            configFragments.push(`${properties.isSuperuser ? '' : 'NO'}SUPERUSER`);
         }
-        if (typeof role.canCreateDb !== 'undefined') {
-            configFragments.push(`${role.canCreateDb ? '' : 'NO'}CREATEDB`);
+        if (typeof properties.canCreateDb !== 'undefined') {
+            configFragments.push(`${properties.canCreateDb ? '' : 'NO'}CREATEDB`);
         }
-        if (typeof role.canCreateRole !== 'undefined') {
-            configFragments.push(`${role.canCreateRole ? '' : 'NO'}CREATEROLE`);
+        if (typeof properties.canCreateRole !== 'undefined') {
+            configFragments.push(`${properties.canCreateRole ? '' : 'NO'}CREATEROLE`);
         }
-        if (typeof role.inherit !== 'undefined') {
-            configFragments.push(`${role.inherit ? '' : 'NO'}INHERIT`);
+        if (typeof properties.inherit !== 'undefined') {
+            configFragments.push(`${properties.inherit ? '' : 'NO'}INHERIT`);
         }
-        if (typeof role.login !== 'undefined') {
-            configFragments.push(`${role.login ? '' : 'NO'}LOGIN`);
+        if (typeof properties.login !== 'undefined') {
+            configFragments.push(`${properties.login ? '' : 'NO'}LOGIN`);
         }
-        if (typeof role.connectionLimit !== 'undefined') {
-            configFragments.push(`CONNECTION LIMIT ${role.connectionLimit}`);
+        if (typeof properties.connectionLimit !== 'undefined') {
+            configFragments.push(`CONNECTION LIMIT ${properties.connectionLimit}`);
         }
-        if (typeof role.password !== 'undefined') {
-            if (typeof role.passwordEncrypted !== 'undefined') {
-                configFragments.push(`${role.passwordEncrypted ? '' : 'UN'}ENCRYPTED`);
+        if (typeof properties.password !== 'undefined') {
+            if (typeof properties.passwordEncrypted !== 'undefined') {
+                configFragments.push(`${properties.passwordEncrypted ? '' : 'UN'}ENCRYPTED`);
             }
-            configFragments.push(`PASSWORD '${role.password}'`);
+            configFragments.push(`PASSWORD '${properties.password}'`);
         }
-        if (typeof role.passwordValidUntil !== 'undefined') {
-            configFragments.push(`VALID UNTIL '${role.passwordValidUntil.toISOString()}'`);
+        if (typeof properties.passwordValidUntil !== 'undefined') {
+            configFragments.push(`VALID UNTIL '${properties.passwordValidUntil.toISOString()}'`);
         }
-        if (typeof role.inRoles !== 'undefined' && role.inRoles.length > 0) {
-            configFragments.push(`IN ROLE ${role.inRoles.join(', ')}`);
+        if (typeof properties.inRoles !== 'undefined' && properties.inRoles.length > 0) {
+            configFragments.push(`IN ROLE ${properties.inRoles.join(', ')}`);
         }
-        if (typeof role.roles !== 'undefined' && role.roles.length > 0) {
-            configFragments.push(`ROLE ${role.roles.join(', ')}`);
+        if (typeof properties.roles !== 'undefined' && properties.roles.length > 0) {
+            configFragments.push(`ROLE ${properties.roles.join(', ')}`);
         }
-        if (typeof role.adminRoles !== 'undefined' && role.adminRoles.length > 0) {
-            configFragments.push(`ADMIN ${role.adminRoles.join(', ')}`);
+        if (typeof properties.adminRoles !== 'undefined' && properties.adminRoles.length > 0) {
+            configFragments.push(`ADMIN ${properties.adminRoles.join(', ')}`);
         }
 
         const query = `CREATE ROLE ${role.name} ${configFragments.join(' ')}`.trim();

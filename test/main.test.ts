@@ -119,7 +119,9 @@ describe('database', () => {
 
             await applier.database({
                 name: databaseName,
-                connectionLimit: 10,
+                properties: {
+                    connectionLimit: 10,
+                },
             });
 
             const db = (await client.query(`SELECT * FROM pg_database WHERE datname = '${databaseName}'`)).rows[0];
@@ -127,7 +129,9 @@ describe('database', () => {
 
             await applier.database({
                 name: databaseName,
-                connectionLimit: 20,
+                properties: {
+                    connectionLimit: 20,
+                },
             });
             const db2 = (await client.query(`SELECT * FROM pg_database WHERE datname = '${databaseName}'`)).rows[0];
             expect(db2.datconnlimit).toEqual(20);
@@ -150,7 +154,9 @@ describe('database', () => {
 
             await applier.database({
                 name: databaseName,
-                connectionLimit: 10,
+                properties: {
+                    connectionLimit: 10,
+                },
             });
 
             const db = (await client.query(`SELECT * FROM pg_database WHERE datname = '${databaseName}'`)).rows[0];
@@ -158,7 +164,9 @@ describe('database', () => {
 
             await applier.database({
                 name: databaseName,
-                connectionLimit: 20,
+                properties: {
+                    connectionLimit: 20,
+                },
             });
             const db2 = (await client.query(`SELECT * FROM pg_database WHERE datname = '${databaseName}'`)).rows[0];
             expect(db2.datconnlimit).toEqual(20);
@@ -237,7 +245,9 @@ describe('role', () => {
 
             await applier.role({
                 name: roleName,
-                connectionLimit: 10,
+                properties: {
+                    connectionLimit: 10,
+                },
             });
 
             const role = (await client.query(`SELECT * FROM pg_roles WHERE rolname = '${roleName}'`)).rows[0];
@@ -245,7 +255,9 @@ describe('role', () => {
 
             await applier.role({
                 name: roleName,
-                connectionLimit: 20,
+                properties: {
+                    connectionLimit: 20,
+                },
             });
 
             const role2 = (await client.query(`SELECT * FROM pg_roles WHERE rolname = '${roleName}'`)).rows[0];
@@ -269,7 +281,9 @@ describe('role', () => {
 
             await applier.role({
                 name: roleName,
-                connectionLimit: 10,
+                properties: {
+                    connectionLimit: 10,
+                },
             });
 
             const role = (await client.query(`SELECT * FROM pg_roles WHERE rolname = '${roleName}'`)).rows[0];
@@ -277,7 +291,9 @@ describe('role', () => {
 
             await applier.role({
                 name: roleName,
-                connectionLimit: 20,
+                properties: {
+                    connectionLimit: 20,
+                },
             });
 
             const role2 = (await client.query(`SELECT * FROM pg_roles WHERE rolname = '${roleName}'`)).rows[0];
