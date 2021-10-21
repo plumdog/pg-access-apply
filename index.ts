@@ -49,6 +49,43 @@ export interface Role {
     properties?: RoleProperties;
 }
 
+export interface GrantOnDatabaseProperties {
+    privileges?: Array<string>;
+    allPrivileges?: boolean;
+    noPrivileges?: boolean;
+    databases: Array<string>;
+    schemas?: Array<string>;
+}
+
+export interface GrantOnDatabaseOptions {
+    prune?: boolean;
+}
+
+export interface GrantOnDatabase {
+    roles: Array<string>;
+    properties: GrantOnDatabaseProperties;
+    options?: GrantOnDatabaseOptions;
+}
+
+export interface GrantOnTableProperties {
+    privileges?: Array<string>;
+    allPrivileges?: boolean;
+    noPrivileges?: boolean;
+    tables?: Array<string>;
+    allTables?: boolean;
+    schemas?: Array<string>;
+}
+
+export interface GrantOnTableOptions {
+    prune?: boolean;
+}
+
+export interface GrantOnTable {
+    roles: Array<string>;
+    properties: GrantOnTableProperties;
+    options?: GrantOnTableOptions;
+}
+
 interface ExecuteQueriesProps {
     config: Config;
     queries: Array<string>;
@@ -79,7 +116,55 @@ const executeQueries = async (props: ExecuteQueriesProps): Promise<void> => {
 export interface PgApplier {
     database(database: Database): Promise<void>;
     role(role: Role): Promise<void>;
+    grantOnDatabase(grantOnDatabase: GrantOnDatabase): Promise<void>;
+    grantOnTable(grantOnTable: GrantOnTable): Promise<void>;
 }
+
+const normalisePrivileges = (privileges?: Array<string>, allPrivileges?: boolean, noPrivileges?: boolean): string | undefined => {
+    if (typeof privileges === 'undefined') {
+        if (!allPrivileges) {
+            if (noPrivileges) {
+                return undefined;
+            }
+            throw new Error('No privileges set');
+        }
+        if (noPrivileges) {
+            throw new Error('Both noPrivileges and allPrivileges set to true');
+        }
+        return 'ALL PRIVILEGES';
+    }
+
+    if (allPrivileges) {
+        throw new Error('Both allPrivileges and list of privileges set');
+    }
+    if (noPrivileges) {
+        throw new Error('Both noPrivileges and list of privileges set');
+    }
+
+    return privileges.join(', ');
+};
+
+const normaliseTables = (tables?: Array<string>, allTables?: boolean, schemas?: Array<string>): string => {
+    if (typeof tables === 'undefined') {
+        if (!allTables) {
+            throw new Error('No tables set');
+        }
+        if (typeof schemas === 'undefined') {
+            throw new Error('Must set schemas if allTables is true');
+        }
+        return `ALL TABLES IN SCHEMA ${schemas.join(', ')}`;
+    }
+
+    if (allTables) {
+        throw new Error('Both allTables and list of tables set');
+    }
+
+    if (typeof schemas !== 'undefined') {
+        throw new Error('Both allTables and a list of schemas set');
+    }
+
+    return tables.join(', ');
+};
 
 export const pg_applier = (config: Config): PgApplier => ({
     database: async (database: Database): Promise<void> => {
@@ -308,6 +393,48 @@ export const pg_applier = (config: Config): PgApplier => ({
         await executeQueries({
             config,
             queries: [query],
+        });
+    },
+    grantOnDatabase: async (grantOnDatabase: GrantOnDatabase): Promise<void> => {
+        const properties: GrantOnDatabaseProperties = grantOnDatabase.properties || {};
+        const options: GrantOnDatabaseOptions = grantOnDatabase.options || {};
+        const roles = grantOnDatabase.roles;
+
+        const queries: Array<string> = [];
+
+        if (options.prune) {
+            queries.push(`REVOKE ALL PRIVILEGES ON DATABASE ${properties.databases.join(', ')} FROM ${roles.join(', ')}`);
+        }
+
+        const privilegesFragment = normalisePrivileges(properties.privileges, properties.allPrivileges, properties.noPrivileges);
+        if (privilegesFragment) {
+            queries.push(`GRANT ${privilegesFragment} ON DATABASE ${properties.databases.join(', ')} TO ${roles.join(', ')}`);
+        }
+
+        await executeQueries({
+            config,
+            queries,
+        });
+    },
+    grantOnTable: async (grantOnTable: GrantOnTable): Promise<void> => {
+        const properties: GrantOnTableProperties = grantOnTable.properties || {};
+        const options: GrantOnTableOptions = grantOnTable.options || {};
+        const roles = grantOnTable.roles;
+
+        const queries = [];
+
+        if (options.prune) {
+            queries.push(`REVOKE ALL PRIVILEGES ON ${normaliseTables(properties.tables, properties.allTables, properties.schemas)} FROM ${roles.join(', ')}`);
+        }
+
+        const privilegesFragment = normalisePrivileges(properties.privileges, properties.allPrivileges, properties.noPrivileges);
+        if (privilegesFragment) {
+            queries.push(`GRANT ${privilegesFragment} ON ${normaliseTables(properties.tables, properties.allTables, properties.schemas)} TO ${roles.join(', ')}`);
+        }
+
+        await executeQueries({
+            config,
+            queries,
         });
     },
 });
