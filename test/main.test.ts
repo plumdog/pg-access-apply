@@ -18,12 +18,19 @@ const randString = (length: number): string => {
     return Math.random().toString(36).substr(2, length);
 };
 
+const dbConnection = (config?: ClientConfig) => async (actions: (client: Client) => Promise<void>) => {
+    const client = getClient(config ?? {});
+    await client.connect();
+    try {
+        await actions(client);
+    } finally {
+        await client.end();
+    }
+};
+
 describe('database', () => {
     test('create database', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -41,16 +48,11 @@ describe('database', () => {
             }
 
             expect(dbs).toEqual(expect.arrayContaining([databaseName]));
-        } finally {
-            await client.end();
-        }
+        });
     });
 
     test('create database with transaction', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             // This works, but only because the code knows to *not*
             // use a transaction for database creation.
             const applier = pg_applier({
@@ -71,16 +73,11 @@ describe('database', () => {
             }
 
             expect(dbs).toEqual(expect.arrayContaining([databaseName]));
-        } finally {
-            await client.end();
-        }
+        });
     });
 
     test('handle existing database', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -102,16 +99,11 @@ describe('database', () => {
             }
 
             expect(dbs).toEqual(expect.arrayContaining([databaseName]));
-        } finally {
-            await client.end();
-        }
+        });
     });
 
     test('change connection limit', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -136,16 +128,11 @@ describe('database', () => {
             });
             const db2 = (await client.query(`SELECT * FROM pg_database WHERE datname = '${databaseName}'`)).rows[0];
             expect(db2.datconnlimit).toEqual(20);
-        } finally {
-            await client.end();
-        }
+        });
     });
 
     test('change connection limit with transaction', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
                 useTransactions: true,
@@ -171,18 +158,13 @@ describe('database', () => {
             });
             const db2 = (await client.query(`SELECT * FROM pg_database WHERE datname = '${databaseName}'`)).rows[0];
             expect(db2.datconnlimit).toEqual(20);
-        } finally {
-            await client.end();
-        }
+        });
     });
 });
 
 describe('role', () => {
     test('create role', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -200,16 +182,11 @@ describe('role', () => {
             }
 
             expect(roles).toEqual(expect.arrayContaining([roleName]));
-        } finally {
-            await client.end();
-        }
+        });
     });
 
     test('create role with transaction', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
                 useTransactions: true,
@@ -228,16 +205,11 @@ describe('role', () => {
             }
 
             expect(roles).toEqual(expect.arrayContaining([roleName]));
-        } finally {
-            await client.end();
-        }
+        });
     });
 
     test('change connection limit', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -263,16 +235,11 @@ describe('role', () => {
 
             const role2 = (await client.query(`SELECT * FROM pg_roles WHERE rolname = '${roleName}'`)).rows[0];
             expect(role2.rolconnlimit).toEqual(20);
-        } finally {
-            await client.end();
-        }
+        });
     });
 
     test('change connection limit with transaction', async () => {
-        const client = getClient();
-        await client.connect();
-
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
                 useTransactions: true,
@@ -299,20 +266,15 @@ describe('role', () => {
 
             const role2 = (await client.query(`SELECT * FROM pg_roles WHERE rolname = '${roleName}'`)).rows[0];
             expect(role2.rolconnlimit).toEqual(20);
-        } finally {
-            await client.end();
-        }
+        });
     });
 });
 
 describe('combined', () => {
     test('create new role, new role can connect ', async () => {
-        const client = getClient();
-        await client.connect();
-
         const roleName = `testrole_${randString(12)}`;
 
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -324,32 +286,22 @@ describe('combined', () => {
                     login: true,
                 },
             });
-        } finally {
-            await client.end();
-        }
+        });
 
-        const newClient = getClient({
+        await dbConnection({
             user: roleName,
             password: 'mypass',
-        });
-        await newClient.connect();
-
-        try {
-            const result = await newClient.query('SELECT 1+1 as two');
+        })(async (client: Client) => {
+            const result = await client.query('SELECT 1+1 as two');
             expect(result.rows[0].two).toEqual(2);
-        } finally {
-            await newClient.end();
-        }
+        });
     });
 
     test('create new database and new role with all privileges in that database, new role can create a table ', async () => {
-        const client = getClient();
-        await client.connect();
-
         const databaseName = `testdb_${randString(12)}`;
         const roleName = `testrole_${randString(12)}`;
 
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -364,17 +316,13 @@ describe('combined', () => {
                     login: true,
                 },
             });
-        } finally {
-            await client.end();
-        }
-
-        const client2 = getClient({
-            database: databaseName,
         });
-        await client2.connect();
-        try {
+
+        await dbConnection({
+            database: databaseName,
+        })(async (client: Client) => {
             const applier = pg_applier({
-                query: client2.query.bind(client2),
+                query: client.query.bind(client),
             });
 
             await applier.grantOnDatabase({
@@ -393,35 +341,25 @@ describe('combined', () => {
                     schemas: ['PUBLIC'],
                 },
             });
-        } finally {
-            await client2.end();
-        }
+        });
 
-        const newClient = getClient({
+        await dbConnection({
             user: roleName,
             password: 'mypass',
-        });
-        await newClient.connect();
-
-        try {
-            await newClient.query('CREATE TABLE notes (title varchar(40) NOT NULL)');
-            await newClient.query(`INSERT INTO notes VALUES ('testtitle')`);
-            const result = await newClient.query('SELECT * FROM notes');
+        })(async (client: Client) => {
+            await client.query('CREATE TABLE notes (title varchar(40) NOT NULL)');
+            await client.query(`INSERT INTO notes VALUES ('testtitle')`);
+            const result = await client.query('SELECT * FROM notes');
             expect(result.rows.length).toEqual(1);
             expect(result.rows[0].title).toEqual('testtitle');
-        } finally {
-            await newClient.end();
-        }
+        });
     });
 
     test('create new database and new role with all privileges in that database, new role can create a table, then revoke table write access, then cannot delete from the table', async () => {
-        const client = getClient();
-        await client.connect();
-
         const databaseName = `testdb_${randString(12)}`;
         const roleName = `testrole_${randString(12)}`;
 
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -436,17 +374,13 @@ describe('combined', () => {
                     login: true,
                 },
             });
-        } finally {
-            await client.end();
-        }
-
-        const client2 = getClient({
-            database: databaseName,
         });
-        await client2.connect();
-        try {
+
+        await dbConnection({
+            database: databaseName,
+        })(async (client: Client) => {
             const applier = pg_applier({
-                query: client2.query.bind(client2),
+                query: client.query.bind(client),
             });
 
             await applier.grantOnDatabase({
@@ -457,7 +391,7 @@ describe('combined', () => {
                 },
             });
 
-            await client2.query('CREATE TABLE notes (title varchar(40) NOT NULL)');
+            await client.query('CREATE TABLE notes (title varchar(40) NOT NULL)');
 
             await applier.grantOnTable({
                 roles: [roleName],
@@ -467,32 +401,23 @@ describe('combined', () => {
                     schemas: ['PUBLIC'],
                 },
             });
-        } finally {
-            await client2.end();
-        }
+        });
 
         // Create a table using the new user
-        const newClient = getClient({
+        await dbConnection({
             user: roleName,
             password: 'mypass',
             database: databaseName,
+        })(async (client: Client) => {
+            await client.query(`INSERT INTO notes VALUES ('testtitle')`);
         });
-        await newClient.connect();
-
-        try {
-            await newClient.query(`INSERT INTO notes VALUES ('testtitle')`);
-        } finally {
-            await newClient.end();
-        }
 
         // Update permissions to allow only SELECT
-        const client3 = getClient({
+        await dbConnection({
             database: databaseName,
-        });
-        await client3.connect();
-        try {
+        })(async (client: Client) => {
             const applier = pg_applier({
-                query: client3.query.bind(client3),
+                query: client.query.bind(client),
             });
 
             await applier.grantOnTable({
@@ -506,36 +431,26 @@ describe('combined', () => {
                     prune: true,
                 },
             });
-        } finally {
-            await client3.end();
-        }
+        });
 
-        const newClient2 = getClient({
+        await dbConnection({
             user: roleName,
             password: 'mypass',
             database: databaseName,
-        });
-        await newClient2.connect();
-
-        try {
-            const result = await newClient2.query('SELECT * FROM notes');
+        })(async (client: Client) => {
+            const result = await client.query('SELECT * FROM notes');
             expect(result.rows.length).toEqual(1);
             expect(result.rows[0].title).toEqual('testtitle');
 
-            await expect(newClient2.query('DELETE FROM notes')).rejects.toThrow('permission denied for table notes');
-        } finally {
-            await newClient2.end();
-        }
+            await expect(client.query('DELETE FROM notes')).rejects.toThrow('permission denied for table notes');
+        });
     });
 
     test('create new database and new role with connect privileges in that database, then remove connect privileges', async () => {
-        const client = getClient();
-        await client.connect();
-
         const databaseName = `testdb_${randString(12)}`;
         const roleName = `testrole_${randString(12)}`;
 
-        try {
+        await dbConnection()(async (client: Client) => {
             const applier = pg_applier({
                 query: client.query.bind(client),
             });
@@ -571,32 +486,23 @@ describe('combined', () => {
                     prune: true,
                 },
             });
-        } finally {
-            await client.end();
-        }
+        });
 
         // Verify that we have connect access
-        const newClient = getClient({
+        await dbConnection({
             user: roleName,
             password: 'mypass',
             database: databaseName,
+        })(async (client: Client) => {
+            await client.query('SELECT 1+1');
         });
-        await newClient.connect();
-
-        try {
-            await newClient.query('SELECT 1+1');
-        } finally {
-            await newClient.end();
-        }
 
         // Update permissions to allow remove CONNECT on the DB
-        const client2 = getClient({
+        await dbConnection({
             database: databaseName,
-        });
-        await client2.connect();
-        try {
+        })(async (client: Client) => {
             const applier = pg_applier({
-                query: client2.query.bind(client2),
+                query: client.query.bind(client),
             });
 
             await applier.grantOnDatabase({
@@ -609,20 +515,14 @@ describe('combined', () => {
                     prune: true,
                 },
             });
-        } finally {
-            await client2.end();
-        }
-
-        const newClient2 = getClient({
-            user: roleName,
-            password: 'mypass',
-            database: databaseName,
         });
 
-        try {
-            await expect(newClient2.connect()).rejects.toThrow('permission denied for database');
-        } finally {
-            await newClient2.end();
-        }
+        await expect(
+            getClient({
+                user: roleName,
+                password: 'mypass',
+                database: databaseName,
+            }).connect(),
+        ).rejects.toThrow(`permission denied for database "${databaseName}"`);
     });
 });
