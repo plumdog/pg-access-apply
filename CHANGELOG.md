@@ -1,0 +1,17 @@
+### Changelog
+
+All notable changes to this project will be documented in this file. Dates are displayed in UTC.
+
+#### 0.1.0
+
+- Handle ALTER DEFAULT [`#8`](https://github.com/plumdog/pg-access-apply/pull/8)
+- Neater test connection helper [`#7`](https://github.com/plumdog/pg-access-apply/pull/7)
+- Add grantOnDatabase and grantOnTable [`#6`](https://github.com/plumdog/pg-access-apply/pull/6)
+- Combined test to check a new role can connect [`#5`](https://github.com/plumdog/pg-access-apply/pull/5)
+- Tidier property passing [`#4`](https://github.com/plumdog/pg-access-apply/pull/4)
+- Better readme [`#3`](https://github.com/plumdog/pg-access-apply/pull/3)
+- Add useTransactions option [`#2`](https://github.com/plumdog/pg-access-apply/pull/2)
+- Run tests on CI [`#1`](https://github.com/plumdog/pg-access-apply/pull/1)
+- Empty project, with linting, CI etc [`9605458`](https://github.com/plumdog/pg-access-apply/commit/9605458b98c5413413a713a0acaf80c3babb37b2)
+- Initial support for database and role [`46993d9`](https://github.com/plumdog/pg-access-apply/commit/46993d9f9f30136e8174896deeba9e1c2b74d975)
+- Initial commit [`01c9793`](https://github.com/plumdog/pg-access-apply/commit/01c97937d92bc23485157e4f39bca8ce42f899c2)
