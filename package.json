@@ -1,6 +1,6 @@
 {
     "name": "pg-access-apply",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Idemponent postgres database and role management",
     "license": "MIT",
     "author": {

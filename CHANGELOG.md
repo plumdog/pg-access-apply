@@ -2,7 +2,13 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
-#### 0.1.0
+#### [v0.1.1](https://github.com/plumdog/pg-access-apply/compare/v0.1.0...v0.1.1)
+
+- Tag without v prefix [`57c3739`](https://github.com/plumdog/pg-access-apply/commit/57c3739388417d937a6881cf604dc17761871ff8)
+
+#### v0.1.0
+
+> 22 October 2021
 
 - Handle ALTER DEFAULT [`#8`](https://github.com/plumdog/pg-access-apply/pull/8)
 - Neater test connection helper [`#7`](https://github.com/plumdog/pg-access-apply/pull/7)
