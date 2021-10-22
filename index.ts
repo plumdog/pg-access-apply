@@ -78,6 +78,7 @@ export interface GrantOnTableProperties {
 
 export interface GrantOnTableOptions {
     prune?: boolean;
+    alterDefault?: boolean;
 }
 
 export interface GrantOnTable {
@@ -425,11 +426,19 @@ export const pg_applier = (config: Config): PgApplier => ({
 
         if (options.prune) {
             queries.push(`REVOKE ALL PRIVILEGES ON ${normaliseTables(properties.tables, properties.allTables, properties.schemas)} FROM ${roles.join(', ')}`);
+
+            if (options.alterDefault) {
+                queries.push(`ALTER DEFAULT PRIVILEGES REVOKE ALL PRIVILEGES ON TABLES FROM ${roles.join(', ')}`);
+            }
         }
 
         const privilegesFragment = normalisePrivileges(properties.privileges, properties.allPrivileges, properties.noPrivileges);
         if (privilegesFragment) {
             queries.push(`GRANT ${privilegesFragment} ON ${normaliseTables(properties.tables, properties.allTables, properties.schemas)} TO ${roles.join(', ')}`);
+
+            if (options.alterDefault) {
+                queries.push(`ALTER DEFAULT PRIVILEGES GRANT ${privilegesFragment} ON TABLES TO ${roles.join(', ')}`);
+            }
         }
 
         await executeQueries({
