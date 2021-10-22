@@ -525,4 +525,75 @@ describe('combined', () => {
             }).connect(),
         ).rejects.toThrow(`permission denied for database "${databaseName}"`);
     });
+
+    test('create new database and new role with connect privileges in that database and grant select default privileges, create a table and new role should have read access to it', async () => {
+        const databaseName = `testdb_${randString(12)}`;
+        const roleName = `testrole_${randString(12)}`;
+
+        await dbConnection()(async (client: Client) => {
+            const applier = pg_applier({
+                query: client.query.bind(client),
+            });
+
+            await applier.database({
+                name: databaseName,
+            });
+            await applier.role({
+                name: roleName,
+                properties: {
+                    password: 'mypass',
+                    login: true,
+                },
+            });
+
+            await applier.grantOnDatabase({
+                roles: [roleName],
+                properties: {
+                    privileges: ['CONNECT'],
+                    databases: [databaseName],
+                },
+                options: {
+                    prune: true,
+                },
+            });
+        });
+
+        await dbConnection({
+            database: databaseName,
+        })(async (client: Client) => {
+            const applier = pg_applier({
+                query: client.query.bind(client),
+            });
+
+            await applier.grantOnTable({
+                roles: [roleName],
+                properties: {
+                    privileges: ['SELECT'],
+                    allTables: true,
+                    schemas: ['PUBLIC'],
+                },
+                options: {
+                    prune: true,
+                    alterDefault: true,
+                },
+            });
+        });
+
+        await dbConnection({
+            database: databaseName,
+        })(async (client: Client) => {
+            await client.query('CREATE TABLE notes (title varchar(40) NOT NULL)');
+            await client.query(`INSERT INTO notes VALUES ('testtitle')`);
+        });
+
+        // Verify that we have read access on a table that was created after the grantOnTable
+        await dbConnection({
+            user: roleName,
+            password: 'mypass',
+            database: databaseName,
+        })(async (client: Client) => {
+            const result = await client.query('SELECT title from notes');
+            expect(result.rows).toEqual([{ title: 'testtitle' }]);
+        });
+    });
 });
