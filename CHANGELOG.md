@@ -2,7 +2,13 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [0.1.3](https://github.com/plumdog/pg-access-apply/compare/0.1.2...0.1.3)
+
+- Fix docs generation script [`abdd8ff`](https://github.com/plumdog/pg-access-apply/commit/abdd8ffb26677e4d4c1aca3c59816652e6791c09)
+
 #### [0.1.2](https://github.com/plumdog/pg-access-apply/compare/0.1.1...0.1.2)
+
+> 26 October 2021
 
 - Docs, include version [`#10`](https://github.com/plumdog/pg-access-apply/pull/10)
 - Docs generation [`#9`](https://github.com/plumdog/pg-access-apply/pull/9)
