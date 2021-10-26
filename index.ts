@@ -1,5 +1,3 @@
-// Maybe add  {Role,Database}Options for things about how this client handles changes.
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type QueryResultRow = Record<string, any>;
 
