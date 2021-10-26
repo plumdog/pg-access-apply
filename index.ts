@@ -1,11 +1,11 @@
 // Maybe add  {Role,Database}Options for things about how this client handles changes.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type QueryResultRow = Record<string, any>;
+export type QueryResultRow = Record<string, any>;
 
-type QueryResultRows = Array<QueryResultRow>;
+export type QueryResultRows = Array<QueryResultRow>;
 
-interface QueryResult {
+export interface QueryResult {
     rows: QueryResultRows;
 }
 
@@ -14,7 +14,7 @@ export interface Config {
     useTransactions?: boolean;
 }
 
-interface DatabaseProperties {
+export interface DatabaseProperties {
     owner?: string;
     template?: string;
     encoding?: string;
@@ -29,7 +29,7 @@ export interface Database {
     properties?: DatabaseProperties;
 }
 
-interface RoleProperties {
+export interface RoleProperties {
     isSuperuser?: boolean;
     canCreateDb?: boolean;
     canCreateRole?: boolean;
