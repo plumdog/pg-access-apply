@@ -22,7 +22,7 @@
         "version": "auto-changelog --hide-credit -p && git add CHANGELOG.md",
         "lint": "eslint 'index.ts' 'test/**/*.ts' jest.config.js --fix",
         "lint-check": "eslint 'index.ts' 'test/**/*.ts' jest.config.js --max-warnings 0",
-        "doc": "typedoc index.ts --includeVersion"
+        "docs": "typedoc index.ts --includeVersion"
     },
     "devDependencies": {
         "@types/jest": "^27.0.2",
