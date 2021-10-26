@@ -12,6 +12,48 @@ then pass this configuration over to an application which creates and
 manages tables etc within that database. The goal of this library is
 to manage things like databases and roles.
 
+# Getting started
+
+```typescript
+import { Client } from 'pg';
+import { pg_applier } from 'pg-access-apply';
+
+// Create a database client and connect
+const client = new Client({ ... });
+client.connect();
+try {
+    // Pass a 'query' function to pg_applier
+    const applier = pg_applier({
+        query: client.query.bind(client),
+    });
+
+    // Ensure database 'mydatabase' exists
+    await applier.database({
+        name: 'mydatabase',
+    });
+
+    // Ensure role 'myrole' exists and has password 'mypassword'
+    await applier.role({
+        name: 'myrole',
+        properties: {
+            password: 'mypassword',
+            login: true,
+        },
+    });
+
+    // Ensure role 'myrole' has all privileges on database 'mydatabase'
+    await applierDb.grantOnDatabase({
+        roles: ['myrole'],
+        properties: {
+            allPrivileges: true,
+            databases: ['mydatabase'],
+        },
+    });
+} finally {
+    client.end();
+}
+```
+
 # Supported Postgres resources
 
 - Database
