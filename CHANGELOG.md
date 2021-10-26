@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
-#### [v0.1.1](https://github.com/plumdog/pg-access-apply/compare/v0.1.0...v0.1.1)
+#### [0.1.2](https://github.com/plumdog/pg-access-apply/compare/0.1.1...0.1.2)
+
+- Docs, include version [`#10`](https://github.com/plumdog/pg-access-apply/pull/10)
+- Docs generation [`#9`](https://github.com/plumdog/pg-access-apply/pull/9)
+
+#### [0.1.1](https://github.com/plumdog/pg-access-apply/compare/v0.1.0...0.1.1)
+
+> 22 October 2021
 
 - Tag without v prefix [`57c3739`](https://github.com/plumdog/pg-access-apply/commit/57c3739388417d937a6881cf604dc17761871ff8)
 
