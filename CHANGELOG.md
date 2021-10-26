@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [0.1.5](https://github.com/plumdog/pg-access-apply/compare/0.1.4...0.1.5)
+
+- Add a getting started example [`7761a33`](https://github.com/plumdog/pg-access-apply/commit/7761a336f5def9413b0921473a0bba0264a96b8b)
+- Record outstanding resources [`df52e58`](https://github.com/plumdog/pg-access-apply/commit/df52e58e5fab5e42bb285fdd7f599bad3a33ba14)
+- Export all types for documentation [`56aa60a`](https://github.com/plumdog/pg-access-apply/commit/56aa60a5ae36af803b2afa17243f9516dedba466)
+
 #### [0.1.4](https://github.com/plumdog/pg-access-apply/compare/0.1.3...0.1.4)
+
+> 26 October 2021
 
 - Add docs and npm links to README [`3d21a3b`](https://github.com/plumdog/pg-access-apply/commit/3d21a3bd3785f5bfde61720818128edbf5c1cf38)
 
