@@ -1,5 +1,6 @@
 *
 !index.ts
+!types.ts
 !jest.config.js
 !package.json
 !package-lock.json

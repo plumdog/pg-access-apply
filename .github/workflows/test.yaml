@@ -32,6 +32,9 @@ jobs:
     - run: npm run compile
 
     - run: npm run lint-check
+    - run: npm run _generate-types
+      env:
+        ERROR_ON_CHANGES: 'yes'
     - run: npm run test
       env:
         PG_HOST: pg
