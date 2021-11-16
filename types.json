@@ -1,0 +1,85 @@
+{
+    "database": {
+        "attributes": {
+            "name": "string"
+        },
+        "properties": {
+            "required": false,
+            "attributes": {
+                "owner": "?string",
+                "template": "?string",
+                "encoding": "?string",
+                "lcCollate": "?string",
+                "lcCtype": "?string",
+                "tablespace": "?string",
+                "connectionLimit": "?number"
+            }
+        }
+    },
+    "role": {
+        "attributes": {
+            "name": "string"
+        },
+        "properties": {
+            "required": false,
+            "attributes": {
+                "isSuperuser": "?boolean",
+                "canCreateDb": "?boolean",
+                "canCreateRole": "?boolean",
+                "inherit": "?boolean",
+                "login": "?boolean",
+                "connectionLimit": "?number",
+                "password": "?string",
+                "passwordValidUntil": "?Date",
+                "passwordEncrypted": "?boolean",
+                "inRoles": "?string[]",
+                "roles": "?string[]",
+                "adminRoles": "?string[]"
+            }
+        }
+    },
+    "grantOnDatabase": {
+        "attributes": {
+            "roles": "string[]"
+        },
+        "properties": {
+            "required": true,
+            "attributes": {
+                "privileges": "?string[]",
+                "allPrivileges": "?boolean",
+                "noPrivileges": "?boolean",
+                "databases": "string[]",
+                "schemas": "?string[]"
+            }
+        },
+        "options": {
+            "required": false,
+            "attributes": {
+                "prune": "?boolean"
+            }
+        }
+    },
+    "grantOnTable": {
+        "attributes": {
+            "roles": "string[]"
+        },
+        "properties": {
+            "required": true,
+            "attributes": {
+                "privileges": "?string[]",
+                "allPrivileges": "?boolean",
+                "noPrivileges": "?boolean",
+                "tables": "?string[]",
+                "allTables": "?boolean",
+                "schemas": "?string[]"
+            }
+        },
+        "options": {
+            "required": false,
+            "attributes": {
+                "prune": "?boolean",
+                "alterDefault": "?boolean"
+            }
+        }
+    }
+}

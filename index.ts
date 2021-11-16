@@ -1,3 +1,17 @@
+export * from './types';
+import {
+    DatabaseProperties,
+    Database,
+    RoleProperties,
+    Role,
+    GrantOnDatabaseProperties,
+    GrantOnDatabaseOptions,
+    GrantOnDatabase,
+    GrantOnTableProperties,
+    GrantOnTableOptions,
+    GrantOnTable,
+} from './types';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type QueryResultRow = Record<string, any>;
 
@@ -10,79 +24,6 @@ export interface QueryResult {
 export interface Config {
     query: (text: string, values?: Array<string>) => Promise<QueryResult>;
     useTransactions?: boolean;
-}
-
-export interface DatabaseProperties {
-    owner?: string;
-    template?: string;
-    encoding?: string;
-    lcCollate?: string;
-    lcCtype?: string;
-    tablespace?: string;
-    connectionLimit?: number;
-}
-
-export interface Database {
-    name: string;
-    properties?: DatabaseProperties;
-}
-
-export interface RoleProperties {
-    isSuperuser?: boolean;
-    canCreateDb?: boolean;
-    canCreateRole?: boolean;
-    inherit?: boolean;
-    login?: boolean;
-    connectionLimit?: number;
-    password?: string;
-    passwordValidUntil?: Date;
-    passwordEncrypted?: boolean;
-    inRoles?: Array<string>;
-    roles?: Array<string>;
-    adminRoles?: Array<string>;
-}
-
-export interface Role {
-    name: string;
-    properties?: RoleProperties;
-}
-
-export interface GrantOnDatabaseProperties {
-    privileges?: Array<string>;
-    allPrivileges?: boolean;
-    noPrivileges?: boolean;
-    databases: Array<string>;
-    schemas?: Array<string>;
-}
-
-export interface GrantOnDatabaseOptions {
-    prune?: boolean;
-}
-
-export interface GrantOnDatabase {
-    roles: Array<string>;
-    properties: GrantOnDatabaseProperties;
-    options?: GrantOnDatabaseOptions;
-}
-
-export interface GrantOnTableProperties {
-    privileges?: Array<string>;
-    allPrivileges?: boolean;
-    noPrivileges?: boolean;
-    tables?: Array<string>;
-    allTables?: boolean;
-    schemas?: Array<string>;
-}
-
-export interface GrantOnTableOptions {
-    prune?: boolean;
-    alterDefault?: boolean;
-}
-
-export interface GrantOnTable {
-    roles: Array<string>;
-    properties: GrantOnTableProperties;
-    options?: GrantOnTableOptions;
 }
 
 interface ExecuteQueriesProps {
